@@ -1,0 +1,54 @@
+# DNS Proxy Guard
+
+面向 Codex 和其他兼容 agent 的 DNS 隐私与代理分流排查 skill。把“解析走哪里”“业务走哪里”“软件是否恢复”分开验证，支持基于日志的局部修复、持久化和回滚。
+
+**执行入口：[SKILL.md](SKILL.md)** · [流程文字版](references/agent-flow.md) · [辅助脚本](references/helper-tools.md)
+
+![DNS 隐私与代理分流 Agent 流程图](assets/agent-flow.png)
+
+## 它解决什么
+
+- 分清全部 DNS 经代理与加密 DNS 分流，避免错误的“零泄露”结论。
+- 检查系统、浏览器、应用内 DNS 和 Mihomo DNS 模块之间的实际路径。
+- 排查国内软件直连、IPv6 不可达、fake-ip 兼容、回环和扫码登录等不同问题。
+- 根据证据生成限定 IP/协议/端口的 IPv4 兼容例外，而不是复制某台电脑的地址。
+- 保留用户指定的 TUN、节点及其他软件配置，验证真实业务再持久化。
+
+它不是 VPN 服务、节点订阅或一键匿名工具。DoH 不等于所有查询经代理；直连软件仍会向业务服务暴露本地出口 IP。网页 DNS 测试也不能覆盖电脑上的每一个应用。
+
+## 安装与使用
+
+将本仓库放入 agent 的 skill 目录，并保持目录名 `dns-proxy-guard`。Codex 的默认位置是 `~/.codex/skills/dns-proxy-guard`；设置了 `CODEX_HOME` 时，使用该目录下的 `skills`。
+
+```sh
+git clone https://github.com/mariozhaofan-pixel/dns-proxy-guard.git ~/.codex/skills/dns-proxy-guard
+```
+
+例如：
+
+> 使用 $dns-proxy-guard 排查我的 DNS 路径和微信发图失败。国内软件应本地直连，其他流量保持现状，不改 TUN。先取证再修改，并说明 DNS 是否全部经代理。
+
+> 使用 $dns-proxy-guard 审查这份候选 Mihomo 配置。只做离线检查，不连接控制器，不修改网络。
+
+没有 skill 自动发现机制的 agent，可以先读取 `SKILL.md`，再按其中链接按需加载参考资料。流程图用于速览；文字和代码才是精确执行依据。
+
+## 脚本与适用范围
+
+仓库中的 Python 脚本只读取本地输入、生成报告或 JavaScript 扩展；**不会自动应用配置或修改网络**。Python 3.10+；JSON 输入不需要第三方库，YAML 输入需要 PyYAML。生成的 JavaScript 面向 Mihomo 配置的 profile 扩展流程，应用前必须检查客户端版本与生成顺序。
+
+```sh
+python scripts/audit_mihomo.py /private/path/runtime.json
+python -m unittest discover -s tests -v
+```
+
+文档记录的具体实现依据包括 Mihomo v1.19.32、Clash Verge Rev v2.5.8；协议层排查可迁移到其他系统和客户端，但这些字段不能直接照搬给不同内核。脚本离线测试覆盖范围以 [辅助脚本说明](references/helper-tools.md) 为准。
+
+2026-10-12 发布前验证：22 项测试全部通过（包含 Node.js 和 PyYAML 实际执行），skill 结构检查通过，合成候选配置通过 Mihomo v1.19.32 配置校验。独立复审覆盖了严格代理目标、无域名字面 IPv6、DNS 策略顺序与 YAML 别名展开边界。这些是离线/合成验证，不代表已经验证使用者自己的网络。
+
+## 隐私与贡献
+
+不要上传订阅链接、节点凭据、controller secret、完整配置、Cookie、登录链接、聊天记录或原始抓包。反馈问题时提供脱敏后的版本、错误类别、规则类型和最小合成案例；原始备份留在自己的私有目录。
+
+本仓库只包含通用方法、文档地址示例和离线辅助工具，没有发布原排查机器的账号、真实节点或固定故障 IP。参考图中的特定产品命令未经核验不会作为本 skill 的步骤。
+
+许可证：[MIT](LICENSE)。流程图由内置图像生成工具制作，文字说明见 [图像制作说明](references/figure-notes.md)。

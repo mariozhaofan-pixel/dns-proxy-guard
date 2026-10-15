@@ -242,13 +242,42 @@ def compare_configs(baseline, candidate, allow_process=(), allow_outbound=()):
     }
 
 
+def compare_equivalence(baseline, candidate):
+    """Compare every field without reporting source keys, values, or differences.
+
+    Unlike preservation checks, this allows no DNS, sniffer, rule, or proxy changes.
+    DNS mapping order is retained conservatively; other mapping order is ignored.
+    """
+    fields = ("tun", "dns", "sniffer", "rules", "proxies", "proxy-groups", "proxy-providers")
+    checks = {
+        key.replace("-", "_") + "_equal": _equal_field(
+            baseline, candidate, key, preserve_object_order=key == "dns"
+        )
+        for key in fields
+    }
+    checks["other_configuration_equal"] = _same(
+        {key: value for key, value in baseline.items() if key not in fields},
+        {key: value for key, value in candidate.items() if key not in fields},
+    )
+    return {
+        "equivalence_checks": checks,
+        "configuration_equivalent": all(checks.values()),
+    }
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("config", help="Baseline JSON or optional YAML configuration")
     parser.add_argument("--compare", metavar="CANDIDATE")
+    parser.add_argument(
+        "--require-equivalent", action="store_true",
+        help="Require every field to match --compare; allowlists do not permit differences",
+    )
     parser.add_argument("--allow-process", action="append", default=[], metavar="NAME")
     parser.add_argument("--allow-outbound", action="append", default=[], metavar="NAME")
     args = parser.parse_args(argv)
+    if args.require_equivalent and not args.compare:
+        parser.error("--require-equivalent requires --compare")
     try:
         baseline = load_config(args.config)
         result = {
@@ -266,6 +295,9 @@ def main(argv=None):
                 baseline, candidate, args.allow_process, args.allow_outbound
             )
             passed = result["comparison"]["preservation_checks_passed"]
+            if args.require_equivalent:
+                result["equivalence"] = compare_equivalence(baseline, candidate)
+                passed = result["equivalence"]["configuration_equivalent"]
         print(json.dumps(result, ensure_ascii=True, indent=2))
         return 0 if passed else 2
     except AuditError as exc:

@@ -255,6 +255,148 @@ class AuditTests(unittest.TestCase):
                     self.assertEqual(result.stdout, "")
 
 
+class EquivalenceTests(unittest.TestCase):
+    @staticmethod
+    def run_audit(before, after, *options):
+        with tempfile.TemporaryDirectory() as folder:
+            source, candidate = Path(folder) / "baseline.json", Path(folder) / "candidate.json"
+            source.write_text(json.dumps(before), encoding="utf-8")
+            candidate.write_text(json.dumps(after), encoding="utf-8")
+            return subprocess.run(
+                [sys.executable, str(ROOT / "scripts/audit_mihomo.py"), str(source),
+                 "--compare", str(candidate), *options],
+                capture_output=True, text=True, timeout=5,
+            )
+
+    def test_identical_configurations_have_only_fixed_boolean_categories(self):
+        result = audit.compare_equivalence(baseline(), baseline())
+        expected = {
+            "tun_equal", "dns_equal", "sniffer_equal", "rules_equal", "proxies_equal",
+            "proxy_groups_equal", "proxy_providers_equal", "other_configuration_equal",
+        }
+        self.assertEqual(set(result), {"equivalence_checks", "configuration_equivalent"})
+        self.assertEqual(set(result["equivalence_checks"]), expected)
+        self.assertTrue(result["configuration_equivalent"])
+        self.assertTrue(all(value is True for value in result["equivalence_checks"].values()))
+
+    def test_every_configuration_category_can_fail_strict_cli_comparison(self):
+        cases = [
+            ("tun_equal", lambda value: value["tun"].update({"enable": False})),
+            ("dns_equal", lambda value: value["dns"].update({"ipv6": True})),
+            ("sniffer_equal", lambda value: value.update({"sniffer": {"enable": True}})),
+            ("rules_equal", lambda value: value["rules"].reverse()),
+            ("proxies_equal", lambda value: value["proxies"].append({"name": "Added", "type": "direct"})),
+            ("proxy_groups_equal", lambda value: value["proxy-groups"][0].update({"type": "fallback"})),
+            ("proxy_providers_equal", lambda value: value["proxy-providers"]["Example"].update({"url": "https://different.example"})),
+            ("other_configuration_equal", lambda value: value["custom-unknown"].update({"preserve": False})),
+        ]
+        for category, mutate in cases:
+            with self.subTest(category=category):
+                before, after = baseline(), baseline()
+                mutate(after)
+                result = self.run_audit(before, after, "--require-equivalent")
+                self.assertEqual(result.returncode, 2, result.stderr)
+                comparison = json.loads(result.stdout)["equivalence"]
+                self.assertFalse(comparison["configuration_equivalent"])
+                self.assertEqual(
+                    [key for key, equal in comparison["equivalence_checks"].items() if not equal],
+                    [category],
+                )
+
+    def test_dns_mapping_order_is_preserved_at_every_depth(self):
+        before = {"dns": {"enable": True, "ipv6": False}}
+        after = {"dns": dict(reversed(list(before["dns"].items())))}
+        self.assertFalse(audit.compare_equivalence(before, after)["configuration_equivalent"])
+        for key in ("nameserver-policy", "proxy-server-nameserver-policy", "future-policy"):
+            with self.subTest(key=key):
+                values = {"regional.example": ["first"], "specific.example": ["second"]}
+                before = {"dns": {key: values}}
+                after = {"dns": {key: dict(reversed(list(values.items())))}}
+                self.assertFalse(audit.compare_equivalence(before, after)["configuration_equivalent"])
+        before = {"dns": {"future-options": [{"first": True, "second": False}]}}
+        after = {"dns": {"future-options": [{"second": False, "first": True}]}}
+        self.assertFalse(audit.compare_equivalence(before, after)["configuration_equivalent"])
+
+    def test_other_mapping_order_is_ignored_including_root_and_nested_objects(self):
+        def reverse_keys(value):
+            if isinstance(value, dict):
+                return {key: reverse_keys(item) for key, item in reversed(list(value.items()))}
+            if isinstance(value, list):
+                return [reverse_keys(item) for item in value]
+            return value
+
+        before = baseline()
+        before["sniffer"] = {"enable": True, "sniff": {"TLS": {"ports": [443], "override-destination": False}}}
+        after = {key: value if key == "dns" else reverse_keys(value)
+                 for key, value in reversed(list(before.items()))}
+        result = self.run_audit(before, after, "--require-equivalent")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(result.stdout)["equivalence"]["configuration_equivalent"])
+
+    def test_list_order_and_scalar_types_remain_significant(self):
+        cases = [
+            ({"dns": {"nameserver": ["first", "second"]}}, {"dns": {"nameserver": ["second", "first"]}}),
+            ({"future": {"nested": [1, 2]}}, {"future": {"nested": [2, 1]}}),
+            ({"tun": {"enable": True}}, {"tun": {"enable": 1}}),
+            ({"dns": {"ipv6": False}}, {"dns": {"ipv6": 0}}),
+            ({"future": [True]}, {"future": [1]}),
+            ({"future": 1}, {"future": 1.0}),
+        ]
+        for before, after in cases:
+            with self.subTest(before=before):
+                self.assertFalse(audit.compare_equivalence(before, after)["configuration_equivalent"])
+
+    def test_missing_null_and_empty_fields_are_distinct_in_both_directions(self):
+        for key in ("tun", "dns", "sniffer", "rules", "proxies", "proxy-groups", "proxy-providers", "future"):
+            for value in (None, {}, []):
+                with self.subTest(key=key, value=value):
+                    self.assertFalse(audit.compare_equivalence({}, {key: value})["configuration_equivalent"])
+                    self.assertFalse(audit.compare_equivalence({key: value}, {})["configuration_equivalent"])
+        for before, after in ((None, {}), (None, []), ({}, [])):
+            self.assertFalse(audit.compare_equivalence({"future": before}, {"future": after})["configuration_equivalent"])
+        self.assertFalse(audit.compare_equivalence({"future": {}}, {"future": {"nested": None}})["configuration_equivalent"])
+
+    def test_strict_mode_rejects_changes_allowed_by_preservation_allowlists(self):
+        before, after = baseline(), baseline()
+        after["dns"]["ipv6"] = True
+        after["sniffer"] = {"enable": True}
+        after["proxies"].append({"name": "Example-IPv4", "type": "direct", "ip-version": "ipv4"})
+        after["rules"][1] = "PROCESS-NAME,ExampleApp.exe,Example-IPv4"
+        allowlists = ("--allow-process", "ExampleApp.exe", "--allow-outbound", "Example-IPv4")
+        ordinary = self.run_audit(before, after, *allowlists)
+        self.assertEqual(ordinary.returncode, 0, ordinary.stderr)
+        self.assertNotIn("equivalence", json.loads(ordinary.stdout))
+        strict = self.run_audit(before, after, *allowlists, "--require-equivalent")
+        self.assertEqual(strict.returncode, 2, strict.stderr)
+        result = json.loads(strict.stdout)
+        self.assertTrue(result["comparison"]["preservation_checks_passed"])
+        self.assertFalse(result["equivalence"]["configuration_equivalent"])
+        identical = self.run_audit(before, before, *allowlists, "--require-equivalent")
+        self.assertEqual(identical.returncode, 0, identical.stderr)
+
+    def test_cli_redacts_unknown_keys_secrets_and_changed_values(self):
+        before, after = baseline(), baseline()
+        before["SYNTHETIC_SECRET_FIELD"] = {"SYNTHETIC_PRIVATE_DOMAIN": "SYNTHETIC_OLD_SECRET"}
+        after["SYNTHETIC_SECRET_FIELD"] = {"SYNTHETIC_PRIVATE_DOMAIN": "SYNTHETIC_NEW_SECRET"}
+        result = self.run_audit(before, after, "--require-equivalent")
+        self.assertEqual(result.returncode, 2, result.stderr)
+        for marker in ("SYNTHETIC_SECRET_FIELD", "SYNTHETIC_PRIVATE_DOMAIN", "SYNTHETIC_OLD_SECRET",
+                       "SYNTHETIC_NEW_SECRET", "SYNTHETIC_CREDENTIAL", "SYNTHETIC_TOKEN",
+                       "SYNTHETIC_PERSONAL_PATH", "proxy.example", "subscription.example"):
+            self.assertNotIn(marker, result.stdout + result.stderr)
+
+    def test_require_equivalent_needs_compare_before_reading_input(self):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts/audit_mihomo.py"),
+             "SYNTHETIC_PERSONAL_PATH.json", "--require-equivalent"],
+            capture_output=True, text=True, timeout=5,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--require-equivalent requires --compare", result.stderr)
+        self.assertNotIn("SYNTHETIC_PERSONAL_PATH", result.stderr)
+        self.assertEqual(result.stdout, "")
+
+
 @unittest.skipUnless(shutil.which("node"), "Node.js not installed; generated JS execution not verified")
 class GeneratedProfileTests(unittest.TestCase):
     def test_idempotence_and_preservation_of_nodes_tun_dns_and_unknown_fields(self):

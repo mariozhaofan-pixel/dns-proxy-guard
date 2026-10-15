@@ -46,3 +46,5 @@ mihomo -t -d /private/path/config-home -f /private/path/candidate.yaml
 Mihomo 的配置 API 可加载配置；服务进程对文件路径可能另有访问限制，应核对当前 API 与安全路径，而不是到处复制含节点秘密的文件。v1.19.32 支持配置文本 `payload`；此调用不会运行 GUI 的扩展脚本。[配置 API](https://wiki.metacubex.one/api/)、[配置接口实现](https://github.com/MetaCubeX/mihomo/blob/v1.19.32/hub/route/configs.go)
 
 应用后验证实际 DNS、连接出站和用户业务。成功后才将相同变更写入持久化来源，保留全部订阅节点和无关配置。客户端重新生成、更新订阅与运行态热加载是不同事件；交付中写清真正测试过哪些。
+
+修复后复发、需要全局扩展或遇到配置回退时，继续读 [持久化与配置漂移](persistence.md)，检查实际 UID、生成顺序、客户端 DNS 字段覆盖及脚本异常处理。不要重复改生成文件来代替修正来源。

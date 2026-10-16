@@ -12,6 +12,7 @@ description: 核查代理环境的 DNS 隐私、国内外分流与应用联网�
 - 快速读图：[Agent 流程图](assets/agent-flow.png)；准确的可检索文字见 [流程说明](references/agent-flow.md)。图不包含可直接执行的机器配置。
 - 选择解析模式、检查 Mihomo 优先级与 DNS 路由时，读 [DNS 与分流](references/dns-routing.md)。
 - 要将目标落到 Mihomo 字段、局部域名例外、候选配置和加载方式时，读 [配置落地方法](references/mihomo-recipes.md)。
+- 需要复用微信、剪映、国内网页与浏览器海外访问的配套规则时，读 [已验证规则配方](references/verified-rule-recipe.md)；它是有适用条件的案例，不是默认全局配置。
 - 修复后复发、切换/重新导入订阅，或要跨订阅保留规则时，读 [持久化与配置漂移](references/persistence.md)。
 - 处理 IPv6、浏览器、应用内 DNS、UWP 或平台差异时，读 [平台与应用排查](references/platform-troubleshooting.md)。
 - 需要离线检查候选配置或构造严格限定的 IPv4 例外时，读 [辅助脚本](references/helper-tools.md)。脚本不应用配置、不修改网络。

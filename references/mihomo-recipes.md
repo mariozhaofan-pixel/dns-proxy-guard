@@ -2,6 +2,8 @@
 
 这些是根据目标构造候选配置的步骤，不是可整段覆盖的默认配置。字段依据为 Mihomo v1.19.32；始终核对当前版本和运行态。[官方 DNS 配置](https://wiki.metacubex.one/config/dns/)
 
+要查看微信、剪映、国内域名与浏览器配套的具体规则、十四项局部 DNS 例外及移植条件，读 [已验证规则配方](verified-rule-recipe.md)。不要把案例中的进程规则、解析器或 IPv4 限制作为每台机器的默认值。
+
 ## 1. 先把解析器与出口配对
 
 对于每条 `nameserver`、`fallback`、`nameserver-policy`、`direct-nameserver`，记录“解析器身份 / 传输 / 出站 / 是否属于例外”。节点的 `proxy-server-nameserver` 和解析器的 `default-nameserver` 单列，避免启动循环依赖。

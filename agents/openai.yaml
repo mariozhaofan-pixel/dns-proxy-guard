@@ -1,6 +1,6 @@
 interface:
-  display_name: "DNS 隐私与代理分流"
-  short_description: "核查 DNS 出口、代理分流和 IPv6 故障，按证据做最小修复并保留回滚。"
-  default_prompt: "使用 $dns-proxy-guard 检查 DNS 是否符合我的隐私目标，排查应用分流并验证真实业务；保留我指定的 TUN 设置。"
+  display_name: "DNS 与 WebRTC 防泄露"
+  short_description: "引导系统代理关闭、TUN 开启，验收 DNS 与 WebRTC；国内软件异常才修分流。"
+  default_prompt: "使用 $dns-proxy-guard，先引导我关闭 Clash 系统代理并开启 TUN，再以 https://ip.net.coffee/claude/ 的 DNS 无泄露和 WebRTC 已禁用或无泄露为目标；中国软件联网不稳定时才进入兼容修复。"
 policy:
   allow_implicit_invocation: true

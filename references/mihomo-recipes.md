@@ -2,7 +2,7 @@
 
 这些是根据目标构造候选配置的步骤，不是可整段覆盖的默认配置。字段依据为 Mihomo v1.19.32；始终核对当前版本和运行态。[官方 DNS 配置](https://wiki.metacubex.one/config/dns/)
 
-要查看微信、剪映、国内域名与浏览器配套的具体规则、十四项局部 DNS 例外及移植条件，读 [已验证规则配方](verified-rule-recipe.md)。不要把案例中的进程规则、解析器或 IPv4 限制作为每台机器的默认值。
+只有中国软件/国内网页联网不稳定时，才读取 [已验证规则配方](verified-rule-recipe.md) 中的具体进程规则、十四项 DNS 例外与移植条件；这些不是主流程默认值。主流程修 DNS 之后仍要完成 [DNS/WebRTC 双项验收](acceptance.md)。
 
 ## 1. 先把解析器与出口配对
 
@@ -47,6 +47,6 @@ mihomo -t -d /private/path/config-home -f /private/path/candidate.yaml
 
 Mihomo 的配置 API 可加载配置；服务进程对文件路径可能另有访问限制，应核对当前 API 与安全路径，而不是到处复制含节点秘密的文件。v1.19.32 支持配置文本 `payload`；此调用不会运行 GUI 的扩展脚本。[配置 API](https://wiki.metacubex.one/api/)、[配置接口实现](https://github.com/MetaCubeX/mihomo/blob/v1.19.32/hub/route/configs.go)
 
-应用后验证实际 DNS、连接出站和用户业务。成功后才将相同变更写入持久化来源，保留全部订阅节点和无关配置。客户端重新生成、更新订阅与运行态热加载是不同事件；交付中写清真正测试过哪些。
+应用后验证目标页 DNS/WebRTC 与实际出站；触发国内兼容分支时另验原失败业务。成功后才将相同变更写入持久化来源，保留全部订阅节点和无关配置。客户端重新生成、更新订阅与运行态热加载是不同事件；交付中写清真正测试过哪些。
 
 修复后复发、需要全局扩展或遇到配置回退时，继续读 [持久化与配置漂移](persistence.md)，检查实际 UID、生成顺序、客户端 DNS 字段覆盖及脚本异常处理。不要重复改生成文件来代替修正来源。

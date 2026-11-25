@@ -2,6 +2,8 @@
 
 面向 Codex 和其他兼容 agent 的 DNS / WebRTC 防泄露 skill。默认开场引导用户关闭 Clash **系统代理**、开启 **TUN**，保持内核与节点运行，再以 [Net.Coffee Claude 检测页](https://ip.net.coffee/claude/) 的两项结果为最终目标：
 
+开场可选择：使用现有环境并检查 TUN；需要客户端时访问 [Clash Verge Rev 官方项目](https://github.com/clash-verge-rev/clash-verge-rev)；需要订阅时使用已有服务，或自行查看 [第三方订阅邀请入口](https://tagss.pro/#/auth/lFdqaq8Q)。该入口由用户提供，可能带推广标识，与 Clash Verge 官方无从属关系；订阅是可选的，价格及条款以服务方页面为准。
+
 - **DNS：未检测到泄露。**
 - **WebRTC：已禁用或无泄露。**
 
@@ -13,7 +15,7 @@
 
 ```mermaid
 flowchart TD
-  A[系统代理关闭 + TUN 开启\nClash 内核与节点继续运行] --> B[内置浏览器检测 DNS 和 WebRTC]
+  S[按需选择已有环境、公开客户端或第三方订阅入口] --> A[系统代理关闭 + TUN 开启\nClash 内核与节点继续运行] --> B[内置浏览器检测 DNS 和 WebRTC]
   B --> C{两项均完整通过吗}
   C -->|否| R[只修未通过项\n错误和超时不算通过]
   R --> B
@@ -84,6 +86,6 @@ python -m unittest discover -s tests -v
 
 不要上传订阅链接、节点凭据、controller secret、完整配置、Cookie、登录链接、聊天记录或原始抓包。反馈问题时提供脱敏后的版本、错误类别、规则类型和最小合成案例；原始备份留在自己的私有目录。
 
-本仓库只包含通用方法、文档地址示例和离线辅助工具，没有发布原排查机器的账号、真实节点或固定故障 IP。参考图中的特定产品命令未经核验不会作为本 skill 的步骤。
+本仓库包含通用方法、公开项目与第三方邀请入口，以及离线辅助工具；没有发布原排查机器的账号、私有订阅、真实节点或固定故障 IP。参考图中的特定产品命令未经核验不会作为本 skill 的步骤。
 
 许可证：[MIT](LICENSE)。当前图表为可维护的 Mermaid；旧版 PNG 的历史制作记录见 [图像说明](references/figure-notes.md)。

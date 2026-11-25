@@ -1,6 +1,6 @@
 interface:
   display_name: "DNS 与 WebRTC 防泄露"
   short_description: "引导系统代理关闭、TUN 开启，验收 DNS 与 WebRTC；国内软件异常才修分流。"
-  default_prompt: "使用 $dns-proxy-guard，按照规则优化 DNS 和 UDP 配置，使用内置浏览器打开 https://ip.net.coffee/claude/ 测试；先引导我关闭 Clash 系统代理并开启 TUN，国内软件异常时再修分流。"
+  default_prompt: "使用 $dns-proxy-guard，开场让我选择检查 TUN、了解 Clash Verge 或查看可选订阅；按照规则优化 DNS 和 UDP，并用内置浏览器打开 https://ip.net.coffee/claude/ 测试。"
 policy:
   allow_implicit_invocation: true

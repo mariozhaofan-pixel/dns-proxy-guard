@@ -26,7 +26,7 @@ Get-NetRoute -AddressFamily IPv6
 
 来源：[DNS 客户端服务器地址](https://learn.microsoft.com/en-us/powershell/module/dnsclient/get-dnsclientserveraddress)、[NetTCPIP 模块](https://learn.microsoft.com/en-us/powershell/module/nettcpip/)。
 
-辨认物理网卡、TUN、其他 VPN 和虚拟网卡，检查到实际目标的匹配路由。物理网卡列着运营商 DNS，不等于本次查询经过它；TUN 列着虚拟 DNS，也不是接管所有查询的证据。不要把仅在代理运行时有效的虚拟 DNS 固定写入物理网卡。
+辨认物理网卡、TUN、其他 VPN 和虚拟网卡，检查到实际目标的匹配路由。物理网卡列着运营商 DNS，不等于本次查询经过它；TUN 列着虚拟 DNS，也不是接管所有查询的证据。仅当已有证据表明物理网卡 DNS 需要调整、且已验证当前虚拟 DNS 确可由该网卡访问时，才按 [Windows DNS 操作与回滚](windows-dns.md) 做可逆试验；不得猜地址或将临时设置当作永久可用。
 
 `ipconfig /flushdns` 仅重置 Windows DNS 缓存，不会修改 DNS 服务器或修复路由。[Microsoft ipconfig 文档](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/ipconfig)
 

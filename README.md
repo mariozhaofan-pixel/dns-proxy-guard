@@ -5,15 +5,15 @@
 - **DNS：未检测到泄露。**
 - **WebRTC：已禁用或无泄露。**
 
-必须在用户实际使用的浏览器完成本轮检测，并在持久化后复测；检测超时、错误或空结果不算通过。中国软件正常时不改应用路由，只有出现联网不稳定才进入兼容修复。
+默认在 Codex 内置浏览器完成本轮检测，并在持久化后复测；另有指定浏览器或该浏览器故障时，也需独立验收。检测超时、错误或空结果不算通过。中国软件正常时不改应用路由，只有出现联网不稳定才进入兼容修复。
 
-**执行入口：[SKILL.md](SKILL.md)** · [目标页验收](references/acceptance.md) · [WebRTC 排查](references/webrtc.md) · [完整流程图](references/agent-flow.md) · [持久化与复发排查](references/persistence.md)
+**执行入口：[SKILL.md](SKILL.md)** · [Windows DNS 操作与回滚](references/windows-dns.md) · [目标页验收](references/acceptance.md) · [WebRTC 排查](references/webrtc.md) · [完整流程图](references/agent-flow.md) · [持久化与复发排查](references/persistence.md)
 
 **仅异常时使用：[微信、剪映、国内网页的兼容规则配方](references/verified-rule-recipe.md)**。这是条件分支，不是默认预置规则或一键应用配置。
 
 ```mermaid
 flowchart TD
-  A[系统代理关闭 + TUN 开启\nClash 内核与节点继续运行] --> B[目标浏览器检测 DNS 和 WebRTC]
+  A[系统代理关闭 + TUN 开启\nClash 内核与节点继续运行] --> B[内置浏览器检测 DNS 和 WebRTC]
   B --> C{两项均完整通过吗}
   C -->|否| R[只修未通过项\n错误和超时不算通过]
   R --> B
@@ -48,7 +48,7 @@ git clone https://github.com/mariozhaofan-pixel/dns-proxy-guard.git ~/.codex/ski
 
 例如：
 
-> 使用 $dns-proxy-guard，先引导我关闭 Clash 系统代理并开启 TUN，在我常用的浏览器完成 Net.Coffee Claude 页检测，达到 DNS 无泄露和 WebRTC 已禁用或无泄露。中国软件出现联网问题时再修分流。
+> 使用 $dns-proxy-guard，先引导我关闭 Clash 系统代理并开启 TUN，在内置浏览器完成 Net.Coffee Claude 页检测，达到 DNS 无泄露和 WebRTC 已禁用或无泄露。中国软件出现联网问题时再修分流。
 
 > 使用 $dns-proxy-guard 审查这份候选 Mihomo 配置。只做离线检查，不连接控制器，不修改网络。
 
@@ -67,6 +67,8 @@ python -m unittest discover -s tests -v
 ```
 
 文档记录的具体实现依据包括 Mihomo v1.19.32、Clash Verge Rev v2.5.8；协议层排查可迁移到其他系统和客户端，但这些字段不能直接照搬给不同内核。脚本离线测试覆盖范围以 [辅助脚本说明](references/helper-tools.md) 为准。
+
+2026-11-25 更新：默认以内置浏览器检测，必要时通过受支持的命令工具运行管理员 PowerShell，按接口实际 DNS 状态准备可逆试验；其他浏览器需要分别验收。
 
 2026-10-28 调整默认工作流：系统代理关闭、TUN 开启 → 目标浏览器 DNS/WebRTC 双项检测 → 修复未通过项 → 仅在中国软件不稳定时进入兼容分支 → 持久化后双项复测。新增目标页验收与 WebRTC 参考，避免将其他浏览器、旧结果、脚本失败或空候选误当成功。
 
